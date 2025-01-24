@@ -1,0 +1,516 @@
+/* App.css */
+
+/* 重置基础样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 确保根元素和body占满视口 */
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* 设置root为flex容器 */
+#root {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 修改app-container样式 */
+.app-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+  /* 限制最大宽度 */
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* 统一的按钮基础样式 */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+}
+
+.background-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('https://images.unsplash.com/photo-1587620962725-abab7fe55159');
+  background-size: cover;
+  background-position: center;
+  z-index: -1;
+  filter: brightness(0.8);
+}
+
+/* 修改content-container样式 */
+.content-container {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 2rem;
+  width: calc(100% - 40px);
+  max-width: 560px;
+  /* 保持固定最大宽度 */
+  min-height: 200px;
+  /* 减小最小高度 */
+  height: auto;
+  /* 高度自适应 */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* 修改content-area样式 */
+/* 修改content-area样式 */
+.content-area {
+  min-height: 100px;
+  /* 减小最小高度 */
+  height: auto;
+  /* 高度自适应 */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  /* 改为从顶部开始布局 */
+}
+
+.title {
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  margin-bottom: 1.5rem;
+  font-size: 2rem;
+}
+
+.tab-switcher {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  justify-content: center;
+  /* 新增居中 */
+}
+
+.tab-btn {
+  padding: 0.8rem 2rem;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1rem;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+  border-radius: 6px 6px 0 0;
+  outline: none;
+}
+
+.tab-btn::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #1890ff;
+  transition: width 0.3s ease;
+}
+
+.tab-btn.active {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tab-btn.active::after {
+  width: 100%;
+}
+
+.git-providers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  padding: 1rem 0;
+  justify-items: center;
+  /* 新增网格项居中 */
+}
+
+.git-providers button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.git-providers button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+.git-providers button img {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 1rem;
+}
+
+.upload-section {
+  padding: 2rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.file-upload {
+  display: inline-flex;
+  align-items: center;
+  padding: 1.5rem 3rem;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.1rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  outline: none;
+}
+
+.file-upload:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.file-upload input[type="file"] {
+  display: none;
+}
+
+.url-input-container {
+  opacity: 0;
+  animation: fadeIn 0.3s ease forwards;
+  animation-delay: 0.2s;
+}
+
+.url-input {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  padding-right: 110px !important;
+  line-height: 1.5;
+}
+
+.confirm-button {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 14px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.confirm-button:hover {
+  background: #40a9ff;
+}
+
+.confirm-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 修改进度条相关样式 */
+.progress-container {
+  position: relative;
+  width: 95%;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  margin: 2rem auto;
+}
+
+.progress-bar {
+  position: absolute;
+  height: 100%;
+  background: linear-gradient(90deg, #52c41a, #1890ff);
+  transition: width 0.3s ease;
+  border-radius: 3px;
+  /* 添加进度条动画效果 */
+  background-size: 200% 100%;
+  animation: moveGradient 2s linear infinite;
+}
+
+/* 进度文字调整位置 */
+.progress-text {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 0.9rem;
+}
+
+/* 结果页面的按钮组 */
+/* 结果页面的按钮组 */
+.button-group {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+/* 结果页面的按钮基础样式 */
+.result-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* 结果页面的返回按钮 */
+.result-btn.return {
+  background: linear-gradient(135deg, #ff9966, #ff5e62);
+}
+
+.result-btn.return:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 94, 98, 0.3);
+}
+
+/* 结果页面的下载按钮 */
+.result-btn.download {
+  background: linear-gradient(135deg, #00b09b, #96c93d);
+}
+
+.result-btn.download:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(150, 201, 61, 0.3);
+}
+
+.button-group .back-btn {
+  position: static;
+  background: linear-gradient(135deg, #ff9966, #ff5e62);
+}
+
+.button-group .back-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 94, 98, 0.3);
+}
+
+.button-group .download-btn {
+  background: linear-gradient(135deg, #00b09b, #96c93d);
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.button-group .download-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(150, 201, 61, 0.3);
+}
+
+/* 6. 修改spinner样式 */
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #1890ff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  position: absolute;
+  bottom: -40px;
+  /* 修改位置到进度条下方 */
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* 添加spin动画 */
+@keyframes spin {
+  0% {
+    transform: translateX(-50%) rotate(0deg);
+  }
+
+  100% {
+    transform: translateX(-50%) rotate(360deg);
+  }
+}
+
+@keyframes moveGradient {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.result-section {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1.5rem;
+  border-radius: 12px;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.3s ease;
+}
+
+.result-section pre {
+  white-space: pre-wrap;
+  overflow: auto;
+  flex-grow: 1;
+  margin: 0;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  line-height: 1.6;
+}
+
+.download-btn {
+  align-self: center;
+  /* 修改对齐方式 */
+  width: fit-content;
+  margin-top: 1.5rem;
+  padding: 0.8rem 1.8rem;
+  background: #52c41a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.download-btn:hover {
+  background: #73d13d;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 响应式调整 */
+@media (max-width: 640px) {
+  .content-container {
+    margin: 10px auto;
+    /* 修正边距 */
+    padding: 1.5rem;
+  }
+
+  .tab-switcher {
+    margin-bottom: 1.5rem;
+  }
+
+  .git-providers {
+    grid-template-columns: 1fr;
+  }
+
+  .git-providers button {
+    padding: 1rem;
+  }
+
+  .git-providers button img {
+    width: 40px;
+    height: 40px;
+  }
+
+  .file-upload {
+    padding: 1.2rem 2rem;
+    font-size: 1rem;
+  }
+
+  .title {
+    font-size: 1.6rem;
+  }
+}
+
+.url-input-section {
+  animation: fadeIn 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: relative;
+}
+
+/* Git页面的返回按钮 */
+.back-btn {
+  position: static;
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-btn::before {
+  content: "←";
+  margin-right: 8px;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateX(-2px);
+}
+
+@media (max-width: 480px) {
+  .tab-btn {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .result-section pre {
+    font-size: 0.9rem;
+  }
+
+  .url-input {
+    padding-right: 80px !important;
+  }
+
+  .confirm-button {
+    padding: 5px 10px;
+    font-size: 0.85rem;
+  }
+}
