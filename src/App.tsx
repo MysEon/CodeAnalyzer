@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import './App.css';
 import { GitService } from './services/gitService';
+import { CodeAnalyzer } from './services/codeAnalyzer';
+import { messageService } from './services/messageService';
 
 interface UploadResult {
   content: string;
@@ -35,9 +37,16 @@ function App() {
       );
 
       // 将文件内容转换为显示格式
-      const content = Object.entries(files)
+      let content = Object.entries(files)
         .map(([path, content]) => `// ${path}\n${content}\n`)
         .join('\n');
+      
+      // 分析代码
+      const analyzer = new CodeAnalyzer();
+      const analysis = analyzer.analyzeProject(files);
+      const report = analyzer.generateReport(analysis);
+
+      content += `\n\n${report}`;
 
       setResult({
         content,
@@ -47,7 +56,10 @@ function App() {
       setShowUrlInput(false);
       setRepoUrl('');
     } catch (error) {
-      alert(error instanceof Error ? error.message : '下载仓库失败');
+      messageService.show({
+        type: 'error',
+        content: error instanceof Error ? error.message : '下载仓库失败'
+      });
     } finally {
       setIsUploading(false);
     }
@@ -71,7 +83,10 @@ function App() {
         fileName: file.name.replace(/\.[^/.]+$/, "") + "_extracted.txt"
       });
     } catch (err) {
-      alert("文件处理失败");
+      messageService.show({
+        type: 'error',
+        content: error instanceof Error ? error.message : '处理文件失败'
+      });
     } finally {
       setIsUploading(false);
     }

@@ -133,7 +133,29 @@ export class GitService {
 
         const zip = await JSZip.loadAsync(response.data);
         const files: { [key: string]: string } = {};
-        const textExtensions = ['js', 'jsx', 'ts', 'tsx', 'css', 'html', 'json', 'md'];
+        const textExtensions = [
+            // 原数组
+            'js', 'jsx', 'ts', 'tsx', 'css', 'html', 'json', 'md',
+            // 编程语言
+            'py', 'java', 'c', 'cpp', 'cs', 'php', 'rb', 'go', 'swift', 'rs', 'kt',
+            'dart', 'lua', 'pl', 'r', 'clj', 'coffee', 'fs', 'h', 'hs', 'm', 'mm',
+            'nim', 'v', 'groovy', 'scala', 'vb',
+            // 配置与数据
+            'yml', 'yaml', 'xml', 'ini', 'toml', 'env', 'properties', 'cfg', 'tf',
+            'csv', 'tsv', 'sql', 'rss', 'json5', 'jsonc', 'proto',
+            // 标记与文档
+            'htm', 'xhtml', 'svg', 'rst', 'tex', 'markdown', 'adoc', 'asciidoc', 'txt',
+            'log', 'rtf', 'odt', 'org', 'bib',
+            // 样式表
+            'scss', 'sass', 'less', 'stylus',
+            // 脚本与模板
+            'sh', 'bat', 'ps1', 'tcl', 'ejs', 'hbs', 'pug', 'j2', 'slim', 'twig', 'erb',
+            'mustache', 'njk',
+            // Web与开发
+            'vue', 'svelte', 'graphql', 'gql', 'lock', 'conf', 'gitattributes',
+            // 其他
+            'diff', 'patch', 'nix', 'zsh', 'fish'
+        ];
 
         for (const [path, file] of Object.entries(zip.files)) {
             if (!file.dir) {
