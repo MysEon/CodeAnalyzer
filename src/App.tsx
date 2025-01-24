@@ -1,6 +1,7 @@
 // App.tsx
 import { useState } from 'react';
 import './App.css';
+import { GitService } from './services/gitService';
 
 interface UploadResult {
   content: string;
@@ -17,17 +18,36 @@ function App() {
   const [repoUrl, setRepoUrl] = useState('');
   const [urlError, setUrlError] = useState('');
 
+  const gitService = new GitService();
+
   const handleGitImport = async () => {
     if (!repoUrl) return;
     setIsUploading(true);
+    setUploadProgress(0);
+
     try {
-      await simulateUpload();
+      const { files, branch } = await gitService.downloadRepository(
+        repoUrl,
+        (progress) => {
+          const percent = Math.round((progress.loaded / progress.total) * 100);
+          setUploadProgress(percent);
+        }
+      );
+
+      // 将文件内容转换为显示格式
+      const content = Object.entries(files)
+        .map(([path, content]) => `// ${path}\n${content}\n`)
+        .join('\n');
+
       setResult({
-        content: `从${selectedProvider}仓库(${repoUrl})解析出的示例文本内容`,
-        fileName: `${selectedProvider}_content.txt`
+        content,
+        fileName: `${repoUrl.split('/').pop()}_${branch}.txt`
       });
+
       setShowUrlInput(false);
       setRepoUrl('');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '下载仓库失败');
     } finally {
       setIsUploading(false);
     }
