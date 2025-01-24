@@ -6,6 +6,13 @@ interface DownloadProgress {
     total: number;
 }
 
+interface ProjectStructure {
+    tree: string; // 文件树字符串
+    keyFiles: { [path: string]: string }; // 关键文件的完整代码
+    abstractFiles: { [path: string]: string }; // 其他文件的抽象表示
+    configs: { [path: string]: any }; // 配置文件的主要内容
+}
+
 export class GitService {
     // CORS代理URL
     private readonly CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
@@ -169,4 +176,101 @@ export class GitService {
 
         return { files, branch: 'main' };
     }
+
+    private generateFileTree(files: { [path: string]: string }): string {
+        const paths = Object.keys(files).sort();
+        let tree = '';
+        let prevPath: string[] = [];
+
+        paths.forEach(path => {
+            const parts = path.split('/');
+            const indent = parts.map((_, i) => '  '.repeat(i)).join('');
+            const isLast = paths.indexOf(path) === paths.length - 1;
+
+            // 比较当前路径和前一个路径，只显示变化的部分
+            let diffIndex = 0;
+            while (diffIndex < parts.length &&
+                diffIndex < prevPath.length &&
+                parts[diffIndex] === prevPath[diffIndex]) {
+                diffIndex++;
+            }
+
+            // 添加新的目录层级
+            for (let i = diffIndex; i < parts.length; i++) {
+                const prefix = isLast && i === parts.length - 1 ? '└── ' : '├── ';
+                tree += `${indent}${prefix}${parts[i]}\n`;
+            }
+
+            prevPath = parts;
+        });
+
+        return tree;
+    }
+
+    private isKeyFile(path: string): boolean {
+        // 定义关键文件的规则
+        const keyPatterns = [
+            /^src\/index\.[jt]sx?$/,  // 入口文件
+            /^src\/App\.[jt]sx?$/,    // 主应用组件
+            /^src\/main\.[jt]sx?$/,   // 主文件
+            /package\.json$/,         // package.json
+            /^src\/components\/.*\/index\.[jt]sx?$/ // 组件入口文件
+        ];
+        return keyPatterns.some(pattern => pattern.test(path));
+    }
+
+    private generateAbstractCode(content: string): string {
+        // 使用简单的AST或者结构描述来替代完整代码
+        // 这里只是一个示例，你可以使用更复杂的AST解析
+        const lines = content.split('\n');
+        const imports = lines.filter(line => line.startsWith('import'));
+        const exports = lines.filter(line => line.includes('export'));
+        const functions = lines
+            .filter(line => line.includes('function') || line.includes('=>'))
+            .map(line => line.trim());
+
+        return [
+            '// Imports',
+            ...imports,
+            '\n// Exports',
+            ...exports,
+            '\n// Functions',
+            ...functions.map(f => `// ${f}`)
+        ].join('\n');
+    }
+
+    private async processFiles(
+        files: { [path: string]: string },
+        branch: string
+    ): Promise<ProjectStructure> {
+        const tree = this.generateFileTree(files);
+        const keyFiles: { [path: string]: string } = {};
+        const abstractFiles: { [path: string]: string } = {};
+        const configs: { [path: string]: any } = {};
+
+        for (const [path, content] of Object.entries(files)) {
+            if (this.isKeyFile(path)) {
+                keyFiles[path] = content;
+            } else if (path.endsWith('.json')) {
+                try {
+                    configs[path] = JSON.parse(content);
+                } catch {
+                    configs[path] = content;
+                }
+            } else {
+                abstractFiles[path] = this.generateAbstractCode(content);
+            }
+        }
+
+        return { tree, keyFiles, abstractFiles, configs };
+    }
+
+    // async downloadRepository(
+    //     repoUrl: string,
+    //     onProgress?: (progress: { loaded: number; total: number }) => void
+    // ): Promise<{ files: ProjectStructure; branch: string }> {
+    //     const { files, branch } = await this.downloadFiles(repoUrl, onProgress);
+    //     const processedFiles = await this.processFiles(files, branch);
+    //     return { files: processedFiles, branch };
+    // }
 }

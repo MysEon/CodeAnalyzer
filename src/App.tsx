@@ -36,23 +36,42 @@ function App() {
         }
       );
 
-      // 将文件内容转换为显示格式
-      let content = Object.entries(files)
-        .map(([path, content]) => `// ${path}\n${content}\n`)
-        .join('\n');
-      
-      // 分析代码
-      const analyzer = new CodeAnalyzer();
-      const analysis = analyzer.analyzeProject(files);
-      const report = analyzer.generateReport(analysis);
+      // 构建输出内容
+      let content = '# 项目结构\n\n';
+      content += files.tree + '\n\n';
 
-      content += `\n\n${report}`;
+      // 添加关键文件
+      content += '# 关键文件\n\n';
+      Object.entries(files.keyFiles).forEach(([path, code]) => {
+        content += `## ${path}\n\`\`\`\n${code}\n\`\`\`\n\n`;
+      });
+
+      // 添加配置文件
+      content += '# 配置\n\n';
+      Object.entries(files.configs).forEach(([path, config]) => {
+        content += `## ${path}\n\`\`\`json\n${JSON.stringify(config, null, 2)
+          }\n\`\`\`\n\n`;
+      });
+
+      // 添加抽象文件结构
+      content += '# 其余文件结构\n\n';
+      Object.entries(files.abstractFiles).forEach(([path, structure]) => {
+        content += `## ${path}\n\`\`\`\n${structure}\n\`\`\`\n\n`;
+      });
+
+      // 添加代码分析报告
+      const analyzer = new CodeAnalyzer();
+      const analysis = analyzer.analyzeProject({
+        ...files.keyFiles,
+        ...files.abstractFiles
+      });
+      const report = analyzer.generateReport(analysis);
+      content += `# 代码分析报告\n\n${report}`;
 
       setResult({
         content,
         fileName: `${repoUrl.split('/').pop()}_${branch}.txt`
       });
-
       setShowUrlInput(false);
       setRepoUrl('');
     } catch (error) {
@@ -163,7 +182,7 @@ function App() {
     <div className="app-container">
       <div className="background-layer" />
       <main className="content-container">
-        <h1 className="title">代码分析工具</h1>
+        <h1 className="title">项目代码 All in One</h1>
 
         <div className="tab-switcher">
           <button
