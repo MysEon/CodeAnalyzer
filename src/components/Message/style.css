@@ -1,13 +1,17 @@
 .message-container {
     position: fixed;
     top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
+    right: 20px;
+    /* 右侧偏移 20px */
     z-index: 1000;
     display: flex;
     flex-direction: column;
     gap: 8px;
     pointer-events: none;
+
+    /* 移除以下旧居中属性 */
+    /* left: 50%; */
+    /* transform: translateX(-50%); */
 }
 
 .message {
@@ -18,7 +22,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    animation: messageSlideIn 0.3s ease, messageFadeOut 0.9s ease forwards 9s;
+    animation: messageSlideIn 0.3s ease, messageFadeOut 0.3s ease forwards 5s;
     pointer-events: auto;
     max-width: 300px;
 }

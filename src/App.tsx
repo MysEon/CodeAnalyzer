@@ -26,19 +26,24 @@ function App() {
     if (!repoUrl) return;
     setIsUploading(true);
     setUploadProgress(0);
-
+    //{ files: { [key: string]: string }, branch: string }
     try {
-      const { files, branch } = await gitService.downloadRepository(
+      const { files: rawFiles, branch } = await gitService.downloadRepository(
         repoUrl,
         (progress) => {
           const percent = Math.round((progress.loaded / progress.total) * 100);
           setUploadProgress(percent);
         }
       );
+      const files = await gitService.processFiles(rawFiles, branch); // 添加处理步骤
 
       // 构建输出内容
       let content = '# 项目结构\n\n';
       content += files.tree + '\n\n';
+      // messageService.show({
+      //   type: 'info',
+      //   content: files.tree
+      // });
 
       // 添加关键文件
       content += '# 关键文件\n\n';
@@ -61,10 +66,13 @@ function App() {
 
       // 添加代码分析报告
       const analyzer = new CodeAnalyzer();
-      const analysis = analyzer.analyzeProject({
+      const analysisFiles = {
         ...files.keyFiles,
-        ...files.abstractFiles
-      });
+        ...Object.entries(files.abstractFiles)
+          .filter(([path]) => SUPPORTED_EXTENSIONS.test(path))
+          .reduce((acc, [path, content]) => ({ ...acc, [path]: content }), {})
+      };
+      const analysis = analyzer.analyzeProject(analysisFiles);
       const report = analyzer.generateReport(analysis);
       content += `# 代码分析报告\n\n${report}`;
 

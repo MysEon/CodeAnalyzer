@@ -2,6 +2,15 @@ import axios from 'axios';
 import JSZip from 'jszip';
 import { cacheService } from './MemoryCacheService';
 import { messageService } from './messageService';
+import { parse, ParserOptions } from '@babel/parser';
+import traverse from '@babel/traverse';
+import {
+    ImportDeclaration,
+    ExportDeclaration,
+    FunctionDeclaration,
+    ClassDeclaration,
+    VariableDeclaration
+} from '@babel/types';
 
 interface DownloadProgress {
     loaded: number;
@@ -221,66 +230,277 @@ export class GitService {
     private generateFileTree(files: { [path: string]: string }): string {
         const paths = Object.keys(files).sort();
         let tree = '';
-        let prevPath: string[] = [];
+        let prevParts: string[] = [];
 
-        paths.forEach(path => {
-            const parts = path.split('/');
-            const indent = parts.map((_, i) => '  '.repeat(i)).join('');
-            const isLast = paths.indexOf(path) === paths.length - 1;
+        paths.forEach((currentPath, pathIndex) => {
+            const currentParts = currentPath.split('/');
 
-            // 比较当前路径和前一个路径，只显示变化的部分
-            let diffIndex = 0;
-            while (diffIndex < parts.length &&
-                diffIndex < prevPath.length &&
-                parts[diffIndex] === prevPath[diffIndex]) {
-                diffIndex++;
+            // 计算与上一个路径的公共前缀层级
+            let commonDepth = 0;
+            while (
+                commonDepth < currentParts.length &&
+                commonDepth < prevParts.length &&
+                currentParts[commonDepth] === prevParts[commonDepth]
+            ) {
+                commonDepth++;
             }
 
-            // 添加新的目录层级
-            for (let i = diffIndex; i < parts.length; i++) {
-                const prefix = isLast && i === parts.length - 1 ? '└── ' : '├── ';
-                tree += `${indent}${prefix}${parts[i]}\n`;
+            // 生成每个层级的缩进和连接符
+            for (let depth = commonDepth; depth < currentParts.length; depth++) {
+                const isLastInParent = this.isLastChildInParent(
+                    paths,
+                    pathIndex,
+                    currentParts,
+                    depth
+                );
+
+                const indent = '  '.repeat(depth);
+                const prefix = isLastInParent ? '└── ' : '├── ';
+
+                // 只在该层级添加连接线
+                tree += `${indent}${prefix}${currentParts[depth]}\n`;
             }
 
-            prevPath = parts;
+            prevParts = currentParts;
         });
 
         return tree;
     }
 
+    /**
+     * 判断当前节点是否是父层级下的最后一个子节点
+     */
+    private isLastChildInParent(
+        allPaths: string[],
+        currentIndex: number,
+        currentParts: string[],
+        targetDepth: number
+    ): boolean {
+        const parentPath = currentParts.slice(0, targetDepth).join('/');
+
+        // 找到所有同父层级的节点
+        const siblings = allPaths.filter(p => {
+            const parts = p.split('/');
+            return (
+                parts.length > targetDepth &&
+                parts.slice(0, targetDepth).join('/') === parentPath
+            );
+        });
+
+        // 当前节点是否是最后一个
+        return siblings[siblings.length - 1] === allPaths[currentIndex];
+    }
+
     private isKeyFile(path: string): boolean {
-        // 定义关键文件的规则
-        const keyPatterns = [
-            /^src\/index\.[jt]sx?$/,  // 入口文件
-            /^src\/App\.[jt]sx?$/,    // 主应用组件
-            /^src\/main\.[jt]sx?$/,   // 主文件
-            /package\.json$/,         // package.json
-            /^src\/components\/.*\/index\.[jt]sx?$/ // 组件入口文件
+        // 通用配置文件（所有项目类型）
+        const configPatterns = [
+            /(^|\/)(package|composer|Cargo|build|pom|build\.gradle|settings\.gradle|go\.mod|mix\.exs)\.(json|toml|lock|exs?|gradle|mod)$/i,
+            /(^|\/)Dockerfile/,
+            /(^|\/)(docker-compose|Jenkinsfile|\.github\/workflows\/)/,
+            /(^|\/)(web|ts)config\.json$/,
+            /(^|\/)\.env/,
+            /(^|\/)Makefile/
         ];
-        return keyPatterns.some(pattern => pattern.test(path));
+
+        // 语言特定关键文件
+        const languagePatterns = [
+            // JavaScript/TypeScript
+            /(^|\/)(index|App|main)\.[jt]sx?$/,
+            /(^|\/)(vite|next|nuxt|gulp|webpack|rollup)\.config\.[jt]s$/,
+            /(^|\/)_app\.(jsx?|tsx?)$/,
+
+            // Python
+            /(^|\/)(requirements|setup|pyproject|Pipfile|manage|main|app)\.(txt|py|toml)$/,
+            /(^|\/)wsgi\.py$/,
+            /(^|\/)(alembic|migrations)\/versions\//,
+
+            // Java/Kotlin
+            /(^|\/)src\/main\/[^/]+\/(Application|Main)\.(java|kt)$/,
+            /(^|\/)build\.gradle\.kts$/,
+
+            // Go
+            /(^|\/)main\.go$/,
+            /(^|\/)go\.(mod|sum)$/,
+
+            // Rust
+            /(^|\/)main\.rs$/,
+            /(^|\/)lib\.rs$/,
+
+            // PHP
+            /(^|\/)index\.php$/,
+            /(^|\/)artisan$/,
+
+            // Ruby
+            /(^|\/)Gemfile/,
+            /(^|\/)Rakefile/,
+
+            // C#
+            /(^|\/)Program\.cs$/,
+            /(^|\/)Startup\.cs$/,
+
+            // 数据库相关
+            /(^|\/)(migrations|seeders)\//,
+            /(^|\/)(schema|dump)\.sql$/,
+
+            // 前端框架特定
+            /(^|\/)(app|layout|page|route)\.[jt]sx?$/,
+            /(^|\/)(sitemap|robots)\.[jt]sx?$/,
+
+            // 移动端
+            /(^|\/)App\.(jsx?|tsx?)$/,
+            /(^|\/)android\/app\/src\/main\//,
+            /(^|\/)ios\/.*\.xcodeproj\//
+        ];
+
+        // 组件/模块入口（多语言适配）
+        const modulePatterns = [
+            /(^|\/)(components|lib|utils|services|controllers|models)\/[^/]+\/(index|main)\.[^/]+$/, // 通用模块入口
+            /(^|\/)(__init__|mod)\.(py|rs)$/, // Python/Rust模块
+            /(^|\/)routes\.[jt]sx?$/, // 路由配置
+            /(^|\/)(middleware|providers)\// // 框架中间件
+        ];
+
+        return [
+            ...configPatterns,
+            ...languagePatterns,
+            ...modulePatterns
+        ].some(pattern => pattern.test(path));
     }
 
     private generateAbstractCode(content: string): string {
-        // 使用简单的AST或者结构描述来替代完整代码
-        // 这里只是一个示例，你可以使用更复杂的AST解析
-        const lines = content.split('\n');
-        const imports = lines.filter(line => line.startsWith('import'));
-        const exports = lines.filter(line => line.includes('export'));
-        const functions = lines
-            .filter(line => line.includes('function') || line.includes('=>'))
-            .map(line => line.trim());
+        try {
+            // 配置解析器（支持TypeScript和JSX）
+            const parserOptions: ParserOptions = {
+                sourceType: 'module',
+                plugins: [
+                    'typescript',
+                    'jsx',
+                    'classProperties',
+                    'decorators-legacy'
+                ]
+            };
 
-        return [
-            '// Imports',
-            ...imports,
-            '\n// Exports',
-            ...exports,
-            '\n// Functions',
-            ...functions.map(f => `// ${f}`)
-        ].join('\n');
+            // 生成AST
+            const ast = parse(content, parserOptions);
+
+            // 收集代码结构元素
+            const elements: string[] = [];
+            let hasContent = false;
+
+            traverse(ast, {
+                // 处理导入语句
+                ImportDeclaration(path) {
+                    const source = path.node.source.value;
+                    const specifiers = path.node.specifiers
+                        .map(s => {
+                            if (s.type === 'ImportDefaultSpecifier') {
+                                return `default as ${s.local.name}`;
+                            }
+                            if (s.type === 'ImportNamespaceSpecifier') {
+                                return `* as ${s.local.name}`;
+                            }
+                            return s.imported.name;
+                        })
+                        .join(', ');
+
+                    elements.push(`IMPORT: ${specifiers} from '${source}'`);
+                    hasContent = true;
+                },
+
+                // 处理导出声明
+                ExportDeclaration(path) {
+                    if (path.isExportNamedDeclaration()) {
+                        const specifiers = path.node.specifiers
+                            ?.map(s => s.exported.name)
+                            .join(', ') || 'all';
+                        const source = path.node.source?.value;
+
+                        elements.push(
+                            `EXPORT: { ${specifiers} }${source ? ` from '${source}'` : ''}`
+                        );
+                    } else if (path.isExportDefaultDeclaration()) {
+                        elements.push('EXPORT: default');
+                    }
+                    hasContent = true;
+                },
+
+                // 处理函数声明
+                FunctionDeclaration(path) {
+                    const node = path.node;
+                    const params = node.params
+                        .map(p => (p as any).name || '{ pattern }')
+                        .join(', ');
+
+                    elements.push(
+                        `FUNCTION: ${node.id?.name || 'anonymous'}(${params})`
+                    );
+                    hasContent = true;
+                },
+
+                // 处理类声明
+                ClassDeclaration(path) {
+                    elements.push(`CLASS: ${path.node.id.name}`);
+                    hasContent = true;
+                },
+
+                // 处理箭头函数表达式
+                ArrowFunctionExpression(path) {
+                    if (path.parentPath.isVariableDeclarator()) {
+                        const varName = (path.parentPath.node.id as any).name;
+                        elements.push(`ARROW FUNCTION: ${varName}`);
+                        hasContent = true;
+                    }
+                }
+            });
+
+            // 处理空文件情况
+            if (!hasContent) {
+                return '// No significant code structure found';
+            }
+
+            // 添加分类标题
+            const categorized = elements.reduce((acc, line) => {
+                const [type] = line.split(':');
+                if (!acc[type]) acc[type] = [];
+                acc[type].push(line.replace(`${type}: `, ''));
+                return acc;
+            }, {} as Record<string, string[]>);
+
+            // 生成格式化输出
+            return Object.entries(categorized)
+                .map(([category, items]) =>
+                    `// ${category}s\n${items.map(i => `// ${i}`).join('\n')}`
+                )
+                .join('\n\n');
+        } catch (error) {
+            // 解析失败时回退到简单实现
+            return this.fallbackAbstractCode(content);
+        }
     }
 
-    private async processFiles(
+    private fallbackAbstractCode(content: string): string {
+        const lines = content.split('\n');
+        const elements: string[] = [];
+
+        // 改进的正则匹配
+        const importReg = /^(import|export)\s+.*/;
+        const functionReg = /(function\s+\w+|=>|\bclass\s+\w+)/;
+
+        lines.forEach(line => {
+            const trimmed = line.trim();
+            if (!trimmed) return;
+
+            if (importReg.test(trimmed)) {
+                elements.push(`// IMPORT/EXPORT: ${trimmed.replace(/{|}/g, '').split(' ')[1]}`);
+            } else if (functionReg.test(trimmed)) {
+                elements.push(`// FUNCTION: ${trimmed.split('(')[0]}`);
+            }
+        });
+
+        return elements.join('\n') || '// No recognizable code patterns';
+    }
+
+    public async processFiles(
         files: { [path: string]: string },
         branch: string
     ): Promise<ProjectStructure> {

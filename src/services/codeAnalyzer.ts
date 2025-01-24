@@ -3,7 +3,7 @@ import traverse from '@babel/traverse';
 import * as t from '@babel/types';
 
 interface FileAnalysis {
-    imports: string[];
+    imports: { source: string; path: string }[]; // 增加来源路径
     exports: string[];
     functions: {
         name: string;
@@ -50,6 +50,10 @@ export class CodeAnalyzer {
     }
 
     private analyzeFile(content: string, path: string): FileAnalysis {
+        // 添加文件类型判断
+        if (path.endsWith('.json')) {
+            return this.analyzeConfigFile(content, path);
+        }
         const analysis: FileAnalysis = {
             imports: [],
             exports: [],
@@ -70,7 +74,10 @@ export class CodeAnalyzer {
             traverse(ast as any, {
                 // 分析导入
                 ImportDeclaration: (path) => {
-                    analysis.imports.push(path.node.source.value);
+                    analysis.imports.push({
+                        source: path.node.source.value,
+                        path: path.hub.file.opts.filename // 获取当前文件路径
+                    });
                 },
 
                 // 分析导出
@@ -155,6 +162,16 @@ export class CodeAnalyzer {
         }
     }
 
+    private analyzeConfigFile(content: string, path: string): FileAnalysis {
+        return {
+            imports: [],
+            exports: [],
+            functions: [],
+            classes: [],
+            variables: [`config_${path.split('/').pop()}`],
+            complexity: 1
+        };
+    }
     analyzeProject(files: { [path: string]: string }): ProjectAnalysis {
         const analysis: ProjectAnalysis = {
             files: {},
@@ -164,14 +181,25 @@ export class CodeAnalyzer {
                 totalClasses: 0,
                 totalLines: 0,
                 averageComplexity: 0,
-                dependencies: {}
+                dependencies: {} // 明确初始化为空对象
             }
         };
 
-        // 分析每个文件
+        // 分析文件时记录依赖关系
         for (const [path, content] of Object.entries(files)) {
             if (path.match(/\.(js|jsx|ts|tsx)$/)) {
-                analysis.files[path] = this.analyzeFile(content, path);
+                const fileAnalysis = this.analyzeFile(content, path);
+                analysis.files[path] = fileAnalysis;
+
+                // 更新依赖关系
+                fileAnalysis.imports.forEach(({ source }) => {
+                    if (!analysis.summary.dependencies[source]) {
+                        analysis.summary.dependencies[source] = [];
+                    }
+                    if (!analysis.summary.dependencies[source].includes(path)) {
+                        analysis.summary.dependencies[source].push(path);
+                    }
+                });
             }
         }
 
@@ -217,7 +245,8 @@ export class CodeAnalyzer {
         report += '依赖关系:\n';
         report += '-'.repeat(20) + '\n';
         Object.entries(analysis.summary.dependencies).forEach(([dep, files]) => {
-            report += `${dep}: ${files.length} 个文件引用\n`;
+            report += `${dep} 被以下文件引用:\n`;
+            files.forEach(file => report += `  - ${file}\n`);
         });
         report += '\n';
 
