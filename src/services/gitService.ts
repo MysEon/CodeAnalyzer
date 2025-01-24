@@ -1,5 +1,7 @@
 import axios from 'axios';
 import JSZip from 'jszip';
+import { cacheService } from './MemoryCacheService';
+import { messageService } from './messageService';
 
 interface DownloadProgress {
     loaded: number;
@@ -19,6 +21,11 @@ export class GitService {
     // GitHub API基础URL
     private readonly GITHUB_API = 'https://api.github.com';
 
+    private getCacheKey(repoUrl: string): string {
+        return `repo:${repoUrl}`;
+    }
+
+
     private getRepoInfo(url: string) {
         url = url.replace(/\.git$/, '');
         const urlParts = url.split('/');
@@ -36,8 +43,20 @@ export class GitService {
         onProgress?: (progress: DownloadProgress) => void
     ): Promise<{ files: { [key: string]: string }, branch: string }> {
         const { owner, repo, platform } = this.getRepoInfo(url);
-
+        let filesX: { files: { [key: string]: string }, branch: string } ;
         try {
+
+            // 检查缓存
+            const cacheKey = this.getCacheKey(url);
+            const cachedData = cacheService.get<{ files: { [key: string]: string }; branch: string }>(cacheKey);
+
+            if (cachedData) {
+                messageService.show({
+                type: 'info',
+                content: '已从缓存中加载'
+                });
+                return cachedData;
+            }
             switch (platform) {
                 case 'github': {
                     // 1. 获取仓库信息和默认分支
@@ -63,7 +82,22 @@ export class GitService {
 
                     // 3. 过滤并获取文件内容
                     const files: { [key: string]: string } = {};
-                    const textExtensions = ['js', 'jsx', 'ts', 'tsx', 'css', 'html', 'json', 'md'];
+                    const textExtensions = [
+                        // 前端
+                        'js', 'jsx', 'ts', 'tsx', 'css', 'scss', 'sass', 'less', 'styl', 'html', 'htm', 'vue', 'svelte',
+
+                        // 后端
+                        'py', 'rb', 'php', 'java', 'go', 'rs', 'cs', 'sql', 'prisma',
+
+                        // 配置
+                        'json', 'yaml', 'yml', 'toml', 'xml', 'ini', 'conf', 'config', 'env', 'properties',
+
+                        // 文档
+                        'md', 'txt', 'log', 'rst', 'adoc', 'wiki',
+
+                        // 其他
+                        'sh', 'bash', 'gitignore', 'dockerignore', 'lock', 'gradle'
+                    ];
 
                     for (const item of treeResponse.data.tree) {
                         if (item.type === 'blob') {
@@ -96,7 +130,13 @@ export class GitService {
                             }
                         }
                     }
-
+                    filesX = { files, branch: defaultBranch }
+                    const cacheKey = this.getCacheKey(url);
+                    cacheService.set(cacheKey, filesX);
+                    messageService.show({
+                        type: 'info',
+                        content: '已存入缓存，有效时间30min'
+                    });
                     return { files, branch: defaultBranch };
                 }
 
@@ -112,6 +152,7 @@ export class GitService {
                     return this.downloadAndExtractZip(zipUrl, onProgress);
                 }
 
+                
                 default:
                     throw new Error('Unsupported git platform');
             }
