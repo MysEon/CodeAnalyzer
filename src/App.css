@@ -207,12 +207,14 @@ body,
   display: none;
 }
 
+/* URL输入框容器 */
 .url-input-container {
-  opacity: 0;
-  animation: fadeIn 0.3s ease forwards;
-  animation-delay: 0.2s;
+  position: relative;
+  width: 100%;
+  margin-bottom: 1rem;
 }
 
+/* URL输入框 */
 .url-input {
   width: 100%;
   padding: 1rem;
@@ -220,10 +222,26 @@ body,
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.9);
   font-size: 1rem;
-  padding-right: 110px !important;
+  padding-right: 110px;
   line-height: 1.5;
+  transition: border-color 0.3s ease;
 }
 
+.url-input.error {
+  border-color: #ff4d4f;
+}
+
+/* 错误提示信息 */
+.url-error-message {
+  position: absolute;
+  left: 0;
+  bottom: -20px;
+  color: #ff4d4f;
+  font-size: 0.8rem;
+  animation: fadeIn 0.2s ease;
+}
+
+/* 确认按钮 */
 .confirm-button {
   position: absolute;
   right: 6px;
@@ -235,7 +253,7 @@ body,
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: opacity 0.2s, background 0.2s;
+  transition: all 0.3s ease;
 }
 
 .confirm-button:hover {
@@ -243,8 +261,13 @@ body,
 }
 
 .confirm-button:disabled {
-  opacity: 0.6;
+  background: #bfbfbf;
   cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.confirm-button:not(:disabled):hover {
+  background: #40a9ff;
 }
 
 /* 修改进度条相关样式 */

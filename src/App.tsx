@@ -15,6 +15,7 @@ function App() {
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
+  const [urlError, setUrlError] = useState('');
 
   const handleGitImport = async () => {
     if (!repoUrl) return;
@@ -77,12 +78,55 @@ function App() {
     setResult(null);
   };
 
+  // 验证git仓库URL的函数
+  // 验证git仓库URL的函数
+  const validateGitUrl = (url: string): { isValid: boolean; message: string } => {
+    if (!url.trim()) {
+      return { isValid: false, message: '请输入仓库地址' };
+    }
+
+    try {
+      new URL(url);
+    } catch {
+      return { isValid: false, message: '请输入有效的URL地址' };
+    }
+
+    const gitPatterns = [
+      /^https?:\/\/github\.com\/[\w-]+\/[\w-]+(?:\.git)?$/,
+      /^https?:\/\/gitlab\.com\/[\w-]+\/[\w-]+(?:\.git)?$/,
+      /^https?:\/\/gitee\.com\/[\w-]+\/[\w-]+(?:\.git)?$/
+    ];
+
+    if (!gitPatterns.some(pattern => pattern.test(url))) {
+      return {
+        isValid: false,
+        message: '请输入有效的Git仓库地址 (支持GitHub、GitLab、Gitee)'
+      };
+    }
+
+    return { isValid: true, message: '' };
+  };
+
+
+  // 修改URL处理函数
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newUrl = e.target.value;
+    setRepoUrl(newUrl);
+    const { isValid, message } = validateGitUrl(newUrl);
+    setUrlError(message);
+  };
+
+  // 添加提交处理函数
+  const handleSubmit = () => {
+    if (!repoUrl || urlError) return;
+    handleGitImport();
+  };
+
 
 
   return (
     <div className="app-container">
       <div className="background-layer" />
-
       <main className="content-container">
         <h1 className="title">代码分析工具</h1>
 
@@ -125,23 +169,23 @@ function App() {
                     ))}
                   </div>
                 ) : (
-                    <div className="url-input-section">
-                      <button className="back-btn" onClick={() => setShowUrlInput(false)}>
-                        选择仓库
-                      </button>
+                  <div className="url-input-section">
+                    <button className="back-btn" onClick={() => setShowUrlInput(false)}>
+                      选择仓库
+                    </button>
                     <div className="url-input-container">
                       <input
                         type="text"
-                        className="url-input"
-                        placeholder={`请输入${selectedProvider}仓库URL`}
+                        className={`url-input ${urlError ? 'error' : ''}`}
                         value={repoUrl}
-                        onChange={(e) => setRepoUrl(e.target.value)}
-                        disabled={isUploading}
+                        onChange={handleUrlChange}
+                        placeholder="请输入Git仓库地址"
                       />
+                      {urlError && <div className="url-error-message">{urlError}</div>}
                       <button
                         className="confirm-button"
-                        onClick={handleGitImport}
-                        disabled={isUploading || !repoUrl}
+                        disabled={!repoUrl || !!urlError}
+                        onClick={handleSubmit}
                       >
                         确认
                       </button>
@@ -176,15 +220,14 @@ function App() {
         ) : (
           <div className="result-section">
             <pre>{result.content}</pre>
-              <div className="button-group">
-                <button onClick={handleReset} className="result-btn return">
-                  返回主页
-                </button>
-                <button onClick={handleDownload} className="result-btn download">
-                  下载结果
-                </button>
-              </div>
-
+            <div className="button-group">
+              <button onClick={handleReset} className="result-btn return">
+                返回主页
+              </button>
+              <button onClick={handleDownload} className="result-btn download">
+                下载结果
+              </button>
+            </div>
           </div>
         )}
       </main>
